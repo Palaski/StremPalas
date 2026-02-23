@@ -2,21 +2,55 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Debrid Player</title>
+  <title>StremPalas</title>
   <style>
-    body { background:#000; color:#fff; font-family:Arial; }
-    input, button { font-size:18px; padding:8px; margin:4px; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background:#000; 
+      color:#0f0; 
+      font-family:Arial,sans-serif; 
+      overflow:hidden;
+    }
+    #header { 
+      background:rgba(0,0,0,0.8); 
+      padding:20px; 
+      text-align:center; 
+      font-size:24px; 
+    }
+    #content { padding:20px; }
+    input, button { 
+      display:block; 
+      width:90%; 
+      margin:10px auto; 
+      padding:12px; 
+      font-size:18px; 
+      background:#333; 
+      color:#fff; 
+      border:1px solid #0f0; 
+    }
+    #log { 
+      background:#111; 
+      height:200px; 
+      overflow:auto; 
+      padding:10px; 
+      font-family:monospace; 
+      font-size:14px; 
+    }
   </style>
 </head>
 <body>
-  <h1>Debrid Player</h1>
-  <p id="status">Carregado.</p>
-
-  <input id="token" placeholder="Real-Debrid API Token" type="password">
-  <input id="magnet" placeholder="Magnet link">
-  <button id="btnAdd">Adicionar torrent</button>
-
-  <pre id="log"></pre>
+  <div id="header">
+    <h1>🖥️ StremPalas</h1>
+    <p id="status">Carregando...</p>
+  </div>
+  
+  <div id="content">
+    <input id="token" type="password" placeholder="Real-Debrid API Token">
+    <input id="magnet" placeholder="Magnet link (ex: magnet:?xt=urn:btih:...)">
+    <button id="btnAdd">➕ Adicionar Torrent</button>
+  </div>
+  
+  <div id="log"></div>
 
   <script src="main.js"></script>
 </body>
