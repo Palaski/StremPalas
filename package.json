@@ -1,0 +1,13 @@
+{
+  "name": "debrid-tizenbrew",
+  "version": "1.0.0",
+  "description": "Player simples com Real-Debrid para TizenBrew",
+  "packageType": "app",
+  "appName": "Debrid Player",
+  "appPath": "app/index.html",
+  "keys": [
+    "VolumeUp",
+    "VolumeDown",
+    "MediaPlayPause"
+  ]
+}
