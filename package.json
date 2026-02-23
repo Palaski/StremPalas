@@ -1,13 +1,15 @@
 {
-  "name": "debrid-tizenbrew",
+  "name": "strempalas",
   "version": "1.0.0",
-  "description": "Player simples com Real-Debrid para TizenBrew",
+  "description": "StremPalas - Debrid Player para TizenBrew",
   "packageType": "app",
-  "appName": "Debrid Player",
+  "appName": "StremPalas",
   "appPath": "app/index.html",
   "keys": [
     "VolumeUp",
     "VolumeDown",
-    "MediaPlayPause"
+    "MediaPlayPause",
+    "MediaPlay",
+    "MediaStop"
   ]
 }
