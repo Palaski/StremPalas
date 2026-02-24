@@ -2,6 +2,6 @@
   "name": "strempalas",
   "version": "1.0.0",
   "packageType": "app",
-  "appName": "TESTE",
-  "appPath": "app/index.html"
+  "appName": "TESTE Root",
+  "appPath": "index.html"
 }
