@@ -1,7 +1,17 @@
 {
   "name": "strempalas",
-  "version": "1.0.1",
+  "version": "1.0.0",
+  "description": "StremPalas - Streaming com Real-Debrid",
   "packageType": "app",
-  "appName": "TESTE Root",
-  "appPath": "index.html"
+  "appName": "StremPalas",
+  "appPath": "index.html",
+  "keys": [
+    "VolumeUp",
+    "VolumeDown",
+    "MediaPlayPause",
+    "MediaPlay",
+    "MediaStop",
+    "MediaFastForward",
+    "MediaRewind"
+  ]
 }
