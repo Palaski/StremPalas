@@ -1,3 +1,13 @@
+// REGISTRA TECLAS PRIMEIRO (antes de qualquer coisa)
+if (window.tizen && tizen.tvinputdevice) {
+  const keys = [
+    "Enter", "Back", "ArrowLeft", "ArrowRight", 
+    "ArrowUp", "ArrowDown", "VolumeUp", "VolumeDown", 
+    "MediaPlayPause"
+  ];
+  tizen.tvinputdevice.registerKeyBatch(keys);
+}
+
 const statusEl = document.getElementById('status');
 const logEl = document.getElementById('log');
 const tokenInput = document.getElementById('token');
@@ -10,6 +20,7 @@ const ui = document.getElementById('ui');
 let apiKey = "";
 let currentTorrentId = null;
 let streamUrl = null;
+let focusedBtn = btnAdd; // Controle remoto
 
 function log(msg) {
   console.log(msg);
@@ -18,115 +29,143 @@ function log(msg) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+function focusBtn(btn) {
+  focusedBtn.classList.remove('focused');
+  focusedBtn = btn;
+  btn.classList.add('focused');
+  log("Foco: " + btn.id);
+}
+
 function showUI(show) {
   ui.style.display = show ? 'block' : 'none';
   player.classList.toggle('hidden', show);
 }
 
-statusEl.textContent = "Carregado OK!";
+// Foco inicial
+focusBtn(btnAdd);
+
+// Navegação teclado
+window.addEventListener("keydown", (e) => {
+  log("Tecla: " + e.code);
+  
+  if (player.classList.contains('hidden')) { // UI visível
+    switch(e.code) {
+      case "ArrowDown":
+        e.preventDefault();
+        if (focusedBtn === btnAdd && btnPlay.style.display !== 'none') focusBtn(btnPlay);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        if (focusedBtn === btnPlay) focusBtn(btnAdd);
+        break;
+      case "Enter":
+      case "Space":
+      case "MediaPlayPause":
+        e.preventDefault();
+        focusedBtn.click();
+        break;
+    }
+  } else { // Player fullscreen
+    switch(e.code) {
+      case "MediaPlayPause":
+      case "Space":
+        e.preventDefault();
+        if (player.paused) player.play();
+        else player.pause();
+        break;
+      case "Back":
+        showUI(true);
+        break;
+    }
+  }
+});
 
 // Token
 tokenInput.addEventListener("input", () => {
   apiKey = tokenInput.value.trim();
-  if (apiKey.length > 20) {
-    log("✅ Token OK");
-  }
 });
 
-// Add Torrent
-btnAdd.addEventListener("click", addTorrent);
+// TORBOX API (não Real-Debrid)
+btnAdd.addEventListener("click", addTorboxTorrent);
 
-async function addTorrent() {
+async function addTorboxTorrent() {
   if (!apiKey) {
-    statusEl.textContent = "❌ Token vazio";
+    statusEl.textContent = "❌ Token Torbox vazio";
     return;
   }
-  if (!magnetInput.value.trim()) {
-    statusEl.textContent = "❌ Magnet vazio";
-    return;
-  }
-
+  
   const magnet = magnetInput.value.trim();
   try {
-    statusEl.textContent = "🔄 Adicionando...";
+    statusEl.textContent = "🔄 Adicionando no Torbox...";
     
-    // 1. Add magnet
-    const resp1 = await fetch("https://api.real-debrid.com/rest/1.0/torrents/addMagnet", {
+    // Torbox API: cria torrent
+    const resp = await fetch("https://api.torbox.app/api/v1/torrents", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/json"
       },
-      body: new URLSearchParams({ magnet })
+      body: JSON.stringify({
+        magnet: magnet,
+        save_path: "/downloads"
+      })
     });
     
-    const data1 = await resp1.json();
-    currentTorrentId = data1.id;
-    log("Torrent ID: " + currentTorrentId);
-    
-    // 2. Select files (primeiro arquivo)
-    await fetch(`https://api.real-debrid.com/rest/1.0/torrents/${currentTorrentId}/selectFiles`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-    
-    // 3. Get stream links
-    const resp3 = await fetch(`https://api.real-debrid.com/rest/1.0/torrents/${currentTorrentId}`, {
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-    
-    const data3 = await resp3.json();
-    streamUrl = data3.links[0]; // Primeiro HLS
-    
-    statusEl.textContent = "✅ Pronto! Clique ▶️";
-    btnPlay.style.display = "block";
+    const data = await resp.json();
+    if (data.id) {
+      currentTorrentId = data.id;
+      log("✅ Torbox ID: " + currentTorrentId);
+      
+      // Polling pra stream pronto (Torbox demora ~1min)
+      pollTorboxStream();
+    } else {
+      throw new Error(data.message || "Erro Torbox");
+    }
     
   } catch (e) {
-    log("❌ Erro: " + e.message);
+    log("❌ Torbox: " + e.message);
     statusEl.textContent = "❌ " + e.message;
   }
 }
 
-// Play
-btnPlay.addEventListener("click", () => {
-  if (!streamUrl) {
-    statusEl.textContent = "❌ Sem stream. Adicione torrent primeiro.";
-    return;
-  }
-  
-  player.src = streamUrl;
-  player.play();
-  showUI(false); // Esconde UI, mostra player fullscreen
-  log("▶️ Tocando: " + streamUrl.substring(0,50) + "...");
-});
-
-// Teclas remotas
-try {
-  if (window.tizen && tizen.tvinputdevice) {
-    tizen.tvinputdevice.registerKeyBatch(["MediaPlayPause", "VolumeUp", "VolumeDown"], 
-      () => log("✅ Teclas remotas OK"),
-      (err) => log("❌ Teclas: " + err.name)
-    );
-  }
-} catch (e) {
-  log("ℹ️ tizen.tvinputdevice: " + e);
+async function pollTorboxStream() {
+  const check = async () => {
+    try {
+      const resp = await fetch(`https://api.torbox.app/api/v1/torrents/${currentTorrentId}`, {
+        headers: { "Authorization": `Bearer ${apiKey}` }
+      });
+      const data = await resp.json();
+      
+      if (data.status === "downloading" || data.progress < 100) {
+        statusEl.textContent = `⏳ ${data.progress}% baixado...`;
+        setTimeout(check, 5000); // Poll 5s
+      } else {
+        // Pronto! Pega stream link
+        streamUrl = data.stream_url || data.content_path;
+        statusEl.textContent = "✅ Pronto! ▶️";
+        btnPlay.style.display = "block";
+        focusBtn(btnPlay);
+      }
+    } catch (e) {
+      log("Poll erro: " + e);
+    }
+  };
+  check();
 }
 
-window.addEventListener("keydown", (e) => {
-  if (e.key === "MediaPlayPause" || e.code === "Space") {
-    if (player.paused) player.play();
-    else player.pause();
-  }
-  
-  log("Tecla: " + e.code);
+// Play
+btnPlay.addEventListener("click", () => {
+  player.src = streamUrl;
+  player.play();
+  showUI(false);
 });
 
 // Player events
+player.addEventListener("loadedmetadata", () => log("📹 Metadata carregada"));
 player.addEventListener("play", () => log("▶️ Tocando"));
-player.addEventListener("pause", () => log("⏸️ Pausado"));
 player.addEventListener("error", (e) => {
-  log("❌ Player error: " + e);
+  log("❌ Player: " + player.error?.message);
   showUI(true);
 });
 
-log("🚀 StremPalas pronto!");
+log("🚀 StremPalas + Torbox pronto!");
